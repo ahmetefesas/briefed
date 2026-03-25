@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Briefed</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Syne:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F7F6F2;
+      --surface: #FFFFFF;
+      --text: #1A1A1A;
+      --text-muted: #777770;
+      --text-hint: #AAAA9F;
+      --border: rgba(0,0,0,0.10);
+      --border-strong: rgba(0,0,0,0.18);
+      --radius: 10px;
+      --radius-lg: 14px;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141413;
+        --surface: #1E1E1C;
+        --text: #F0EFE9;
+        --text-muted: #888880;
+        --text-hint: #555550;
+        --border: rgba(255,255,255,0.08);
+        --border-strong: rgba(255,255,255,0.15);
+      }
+    }
+
+    body {
+      font-family: 'Syne', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2.5rem 1.5rem 4rem;
+    }
+
+    .app {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+
+    .logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 30px;
+      letter-spacing: -0.5px;
+      margin-bottom: 2.5rem;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .logo-dot {
+      width: 7px; height: 7px;
+      background: var(--text);
+      border-radius: 50%;
+      display: inline-block;
+      margin-left: 1px;
+      position: relative;
+      top: -4px;
+    }
+
+    .lang-toggle {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 1.5rem;
+    }
+
+    .lang-btn {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 6px 18px;
+      border-radius: 100px;
+      cursor: pointer;
+      border: 0.5px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+
+    .lang-btn.active {
+      background: var(--text);
+      color: var(--bg);
+      border-color: var(--text);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 1.25rem;
+    }
+
+    @media (max-width: 520px) {
+      .filters { grid-template-columns: 1fr; }
+    }
+
+    .filter-group label {
+      display: block;
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-hint);
+      margin-bottom: 6px;
+    }
+
+    .filter-group select {
+      width: 100%;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      background: var(--surface);
+      color: var(--text);
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius);
+      padding: 9px 12px;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 32px;
+    }
+
+    .generate-btn {
+      width: 100%;
+      font-family: 'Syne', sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: var(--text);
+      color: var(--bg);
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      margin-bottom: 2rem;
+    }
+
+    .generate-btn:hover { opacity: 0.82; }
+    .generate-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .loading-state {
+      text-align: center;
+      padding: 3.5rem;
+      display: none;
+    }
+    .loading-state.visible { display: block; }
+
+    .spinner {
+      width: 28px; height: 28px;
+      border: 2px solid var(--border-strong);
+      border-top-color: var(--text);
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .loading-text { font-size: 13px; color: var(--text-muted); }
+
+    .error-msg {
+      font-size: 13px;
+      color: #C0392B;
+      text-align: center;
+      padding: 1rem;
+      display: none;
+    }
+    .error-msg.visible { display: block; }
+
+    .brief-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border-strong);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      display: none;
+      animation: fadeUp 0.3s ease;
+    }
+    .brief-card.visible { display: block; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .brief-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      gap: 1rem;
+    }
+
+    .brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 34px;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-industry {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-top: 5px;
+    }
+
+    .difficulty-badge {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 5px 13px;
+      border-radius: 100px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .difficulty-junior { background: #EAF3DE; color: #3B6D11; }
+    .difficulty-mid { background: #FAEEDA; color: #854F0B; }
+    .difficulty-senior { background: #FAECE7; color: #993C1D; }
+
+    .divider {
+      height: 0.5px;
+      background: var(--border);
+      margin: 1.5rem 0;
+    }
+
+    .brief-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 520px) {
+      .brief-grid { grid-template-columns: 1fr; }
+    }
+
+    .brief-field label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-hint);
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .brief-field p {
+      font-size: 13px;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    .brief-field.full { grid-column: 1 / -1; }
+
+    .tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .tag {
+      font-size: 12px;
+      font-weight: 500;
+      padding: 4px 11px;
+      border-radius: 100px;
+      background: var(--bg);
+      color: var(--text-muted);
+      border: 0.5px solid var(--border-strong);
+    }
+
+    .palette-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .palette-dot {
+      width: 30px; height: 30px;
+      border-radius: 50%;
+      border: 0.5px solid var(--border);
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.15s;
+    }
+    .palette-dot:hover { transform: scale(1.15); }
+
+    .palette-hex {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 6px;
+    }
+
+    .scope-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .scope-item {
+      font-size: 13px;
+      color: var(--text);
+      padding: 6px 0;
+      border-bottom: 0.5px solid var(--border);
+    }
+    .scope-item:last-child { border-bottom: none; }
+
+    .brief-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 1.75rem;
+      flex-wrap: wrap;
+    }
+
+    .action-btn {
+      font-family: 'Syne', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 9px 18px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      border: 0.5px solid var(--border-strong);
+      background: transparent;
+      color: var(--text-muted);
+      transition: all 0.15s;
+    }
+    .action-btn:hover { background: var(--bg); color: var(--text); }
+    .action-btn.primary {
+      background: var(--text);
+      color: var(--bg);
+      border-color: transparent;
+    }
+    .action-btn.primary:hover { opacity: 0.82; }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="logo">Briefed<span class="logo-dot"></span></div>
+
+  <div class="lang-toggle">
+    <button class="lang-btn active" onclick="setLang('tr')" id="btn-tr">TR</button>
+    <button class="lang-btn" onclick="setLang('en')" id="btn-en">EN</button>
+  </div>
+
+  <div class="filters">
+    <div class="filter-group">
+      <label id="label-sector">Sektör</label>
+      <select id="sector">
+        <option value="random" id="opt-sector-random">Rastgele</option>
+        <option value="food">Food & Beverage</option>
+        <option value="tech">Technology</option>
+        <option value="fashion">Fashion</option>
+        <option value="health">Health & Wellness</option>
+        <option value="finance">Finance</option>
+        <option value="hospitality">Hospitality</option>
+        <option value="beauty">Beauty</option>
+        <option value="architecture">Architecture</option>
+        <option value="sport">Sport</option>
+        <option value="education">Education</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label id="label-style">Stil</label>
+      <select id="style">
+        <option value="random" id="opt-style-random">Rastgele</option>
+        <option value="minimal">Minimal</option>
+        <option value="luxury">Luxury</option>
+        <option value="brutalist">Brutalist</option>
+        <option value="playful">Playful</option>
+        <option value="editorial">Editorial</option>
+        <option value="organic">Organic</option>
+        <option value="retro">Retro</option>
+        <option value="maximalist">Maximalist</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label id="label-difficulty">Zorluk</label>
+      <select id="difficulty">
+        <option value="random" id="opt-diff-random">Rastgele</option>
+        <option value="junior">Junior</option>
+        <option value="mid">Mid</option>
+        <option value="senior">Senior</option>
+      </select>
+    </div>
+  </div>
+
+  <button class="generate-btn" onclick="generateBrief()" id="gen-btn">Brief üret</button>
+
+  <div class="loading-state" id="loading">
+    <div class="spinner"></div>
+    <p class="loading-text" id="loading-text">Müşteri yaratılıyor...</p>
+  </div>
+
+  <div class="error-msg" id="error-msg">Bir hata oluştu, tekrar dene.</div>
+
+  <div class="brief-card" id="brief-card">
+    <div class="brief-header">
+      <div>
+        <div class="brand-name" id="b-name">—</div>
+        <div class="brand-industry" id="b-industry">—</div>
+      </div>
+      <span class="difficulty-badge" id="b-difficulty">—</span>
+    </div>
+
+    <div class="brief-grid">
+      <div class="brief-field full">
+        <label id="lbl-personality">Marka Kişiliği</label>
+        <div class="tags" id="b-personality"></div>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-audience">Hedef Kitle</label>
+        <p id="b-audience">—</p>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-values">Marka Değerleri</label>
+        <p id="b-values">—</p>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-palette">Renk Paleti</label>
+        <div class="palette-row" id="b-palette"></div>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-typography">Tipografi</label>
+        <p id="b-typography">—</p>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-visual">Görsel Yön</label>
+        <p id="b-visual">—</p>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-symbols">Semboller / Objeler</label>
+        <p id="b-symbols">—</p>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-tone">Ton</label>
+        <p id="b-tone">—</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="brief-grid">
+      <div class="brief-field">
+        <label id="lbl-scope">Proje Kapsamı</label>
+        <div class="scope-list" id="b-scope"></div>
+      </div>
+      <div class="brief-field">
+        <label id="lbl-avoid">Kaçınılacaklar</label>
+        <p id="b-avoid">—</p>
+      </div>
+    </div>
+
+    <div class="brief-actions">
+      <button class="action-btn primary" onclick="exportPDF()" id="btn-export">PDF olarak kaydet</button>
+      <button class="action-btn" onclick="generateBrief()" id="btn-regen">Yeniden üret</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let currentLang = 'tr';
+let currentBrief = null;
+
+const T = {
+  tr: {
+    gen: 'Brief üret', regen: 'Yeniden üret', export: 'PDF olarak kaydet',
+    loading: 'Müşteri yaratılıyor...', sector: 'Sektör', style: 'Stil',
+    difficulty: 'Zorluk', random: 'Rastgele', personality: 'Marka Kişiliği',
+    audience: 'Hedef Kitle', values: 'Marka Değerleri', palette: 'Renk Paleti',
+    typography: 'Tipografi', visual: 'Görsel Yön', symbols: 'Semboller / Objeler',
+    tone: 'Ton', scope: 'Proje Kapsamı', avoid: 'Kaçınılacaklar'
+  },
+  en: {
+    gen: 'Generate brief', regen: 'Regenerate', export: 'Save as PDF',
+    loading: 'Creating client...', sector: 'Sector', style: 'Style',
+    difficulty: 'Difficulty', random: 'Random', personality: 'Brand Personality',
+    audience: 'Target Audience', values: 'Brand Values', palette: 'Color Palette',
+    typography: 'Typography', visual: 'Visual Direction', symbols: 'Symbols / Objects',
+    tone: 'Tone', scope: 'Project Scope', avoid: 'Things to Avoid'
+  }
+};
+
+function setLang(lang) {
+  currentLang = lang;
+  document.getElementById('btn-tr').classList.toggle('active', lang === 'tr');
+  document.getElementById('btn-en').classList.toggle('active', lang === 'en');
+  const t = T[lang];
+  document.getElementById('gen-btn').textContent = t.gen;
+  document.getElementById('btn-regen').textContent = t.regen;
+  document.getElementById('btn-export').textContent = t.export;
+  document.getElementById('loading-text').textContent = t.loading;
+  document.getElementById('label-sector').textContent = t.sector;
+  document.getElementById('label-style').textContent = t.style;
+  document.getElementById('label-difficulty').textContent = t.difficulty;
+  document.getElementById('lbl-personality').textContent = t.personality;
+  document.getElementById('lbl-audience').textContent = t.audience;
+  document.getElementById('lbl-values').textContent = t.values;
+  document.getElementById('lbl-palette').textContent = t.palette;
+  document.getElementById('lbl-typography').textContent = t.typography;
+  document.getElementById('lbl-visual').textContent = t.visual;
+  document.getElementById('lbl-symbols').textContent = t.symbols;
+  document.getElementById('lbl-tone').textContent = t.tone;
+  document.getElementById('lbl-scope').textContent = t.scope;
+  document.getElementById('lbl-avoid').textContent = t.avoid;
+  document.getElementById('opt-sector-random').textContent = t.random;
+  document.getElementById('opt-style-random').textContent = t.random;
+  document.getElementById('opt-diff-random').textContent = t.random;
+  document.querySelector('html').lang = lang;
+}
+
+async function generateBrief() {
+  document.getElementById('loading').classList.add('visible');
+  document.getElementById('brief-card').classList.remove('visible');
+  document.getElementById('error-msg').classList.remove('visible');
+  document.getElementById('gen-btn').disabled = true;
+
+  try {
+    const res = await fetch('/api/brief', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sector: document.getElementById('sector').value,
+        style: document.getElementById('style').value,
+        difficulty: document.getElementById('difficulty').value,
+        lang: currentLang
+      })
+    });
+    const brief = await res.json();
+    if (brief.error) throw new Error(brief.error);
+    currentBrief = brief;
+    renderBrief(brief);
+  } catch(e) {
+    document.getElementById('error-msg').classList.add('visible');
+  } finally {
+    document.getElementById('loading').classList.remove('visible');
+    document.getElementById('gen-btn').disabled = false;
+  }
+}
+
+function renderBrief(b) {
+  document.getElementById('b-name').textContent = b.brandName;
+  document.getElementById('b-industry').textContent = b.industry;
+  document.getElementById('b-audience').textContent = b.targetAudience;
+  document.getElementById('b-values').textContent = b.brandValues;
+  document.getElementById('b-typography').textContent = b.typography;
+  document.getElementById('b-visual').textContent = b.visualDirection;
+  document.getElementById('b-symbols').textContent = b.symbols;
+  document.getElementById('b-tone').textContent = b.tone;
+  document.getElementById('b-avoid').textContent = b.avoid;
+
+  const diff = b.difficulty || 'mid';
+  const diffEl = document.getElementById('b-difficulty');
+  diffEl.textContent = diff;
+  diffEl.className = 'difficulty-badge difficulty-' + diff;
+
+  const tagsEl = document.getElementById('b-personality');
+  tagsEl.innerHTML = '';
+  (b.personality || []).forEach(p => {
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.textContent = p;
+    tagsEl.appendChild(tag);
+  });
+
+  const paletteEl = document.getElementById('b-palette');
+  paletteEl.innerHTML = '';
+  (b.colors || []).forEach(hex => {
+    const wrap = document.createElement('div');
+    const dot = document.createElement('div');
+    dot.className = 'palette-dot';
+    dot.style.background = hex;
+    dot.title = hex;
+    const label = document.createElement('div');
+    label.className = 'palette-hex';
+    label.textContent = hex;
+    wrap.appendChild(dot);
+    wrap.appendChild(label);
+    paletteEl.appendChild(wrap);
+  });
+
+  const scopeEl = document.getElementById('b-scope');
+  scopeEl.innerHTML = '';
+  (b.scope || []).forEach(item => {
+    const el = document.createElement('div');
+    el.className = 'scope-item';
+    el.textContent = item;
+    scopeEl.appendChild(el);
+  });
+
+  document.getElementById('brief-card').classList.add('visible');
+}
+
+function exportPDF() {
+  if (!currentBrief) return;
+  const el = document.getElementById('brief-card');
+  html2pdf().set({
+    margin: 0.6,
+    filename: (currentBrief.brandName || 'brief').toLowerCase().replace(/\s+/g, '-') + '-brief.pdf',
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+  }).from(el).save();
+}
+</script>
+</body>
+</html>
