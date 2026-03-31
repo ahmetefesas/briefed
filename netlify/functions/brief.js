@@ -35,7 +35,7 @@ Make it feel like a REAL client. Colors must be real hex codes. Make it creative
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${process.env.OPENROUTER_API_KEY}`,
-        'HTTP-Referer': 'https://briefed.netlify.app',
+        'HTTP-Referer': 'https://legendary-jalebi-fdea73.netlify.app',
         'X-Title': 'Briefed'
       },
       body: JSON.stringify({
@@ -45,10 +45,15 @@ Make it feel like a REAL client. Colors must be real hex codes. Make it creative
     });
 
     const data = await response.json();
+
+    if (!data.choices || !data.choices[0]) {
+      return { statusCode: 500, body: JSON.stringify({ error: JSON.stringify(data) }) };
+    }
+
     const text = data.choices[0].message.content.replace(/```json|```/g, '').trim();
     const brief = JSON.parse(text);
     return { statusCode: 200, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(brief) };
   } catch(e) {
-    return { statusCode: 500, body: JSON.stringify({ error: 'Brief üretilemedi.' }) };
+    return { statusCode: 500, body: JSON.stringify({ error: e.message }) };
   }
 };
