@@ -39,7 +39,7 @@ Make it feel like a REAL client. Colors must be real hex codes. Make it creative
         'X-Title': 'Briefed'
       },
       body: JSON.stringify({
-        model: 'google/gemma-3-27b-it:free',
+        model: 'mistralai/mistral-7b-instruct:free',
         messages: [{ role: 'user', content: prompt }]
       })
     });
